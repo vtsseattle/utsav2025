@@ -8,12 +8,28 @@
         body{font-family:Arial,Helvetica,sans-serif;background:#f4f7fa;color:#333;margin:0;padding:0;}
         .container{max-width:1000px;margin:30px auto;padding:20px;background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.1);}
         h1{text-align:center;color:#2c3e50;}
-        .upload{margin:20px 0;text-align:center;}
-        .config-box, .pledge-box{margin:20px 0;padding:15px;background:#f0f8ff;border-radius:6px;}
-        .config-box h3, .pledge-box h3{margin-top:0;color:#1a73e8;}
+        .section{margin:20px 0;background:#e8f5f5;border-radius:8px;overflow:hidden;transition:all .2s;}
+        .section-header{
+            padding:14px 18px;background:#a7d7d7;color:#1a5f5f;font-weight:bold;cursor:pointer;
+            user-select:none;display:flex;justify-content:space-between;align-items:center;
+            font-size:1.05rem;
+        }
+        .section-header::after{
+            content:'expand_more';  /* Down arrow when collapsed */
+            font-family:'Material Icons';
+            font-size:1.4rem;
+            transition:transform .2s;
+        }
+        .section-header.open::after{
+            content:'expand_less';  /* Up arrow when open */
+        }
+        .section-content{padding:18px;background:#fdfdf9;display:none;}
+        .section.open .section-content{display:block;}
         .input-group{max-width:300px;margin:0 auto;}
-        .input-group label{font-weight:bold;display:block;margin-bottom:5px;color:#2c3e50;}
-        .input-group input{width:100%;padding:8px;font-size:1rem;border:1px solid #81c784;border-radius:4px;}
+        .input-group label{font-weight:bold;display:block;margin-bottom:6px;color:#2c3e50;}
+        .input-group input{width:100%;padding:9px;font-size:1rem;border:1px solid #81c784;border-radius:4px;}
+        .btn-clear{background:#e57373;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:0.9rem;margin-top:12px;}
+        .btn-clear:hover{background:#d32f2f;}
         .summary{display:flex;justify-content:space-around;flex-wrap:wrap;margin:30px 0;}
         .box{background:#e9f5ff;padding:15px;border-radius:6px;text-align:center;flex:1 1 160px;margin:10px;}
         .box h3{margin:0 0 8px;font-size:1.1rem;color:#2c3e50;}
@@ -27,8 +43,10 @@
         #goal-line{position:absolute;width:100%;height:2px;background:#333;left:0;}
         .label{position:absolute;width:220px;left:100px;font-weight:bold;}
         .hidden{display:none;}
-        .note{font-size:0.9rem;color:#666;text-align:center;margin-top:5px;}
+        .note{font-size:0.9rem;color:#666;margin-top:6px;text-align:center;}
     </style>
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- SheetJS -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Chart.js -->
@@ -39,9 +57,9 @@
     <h1>VT Seva Branch Funding Tracker</h1>
     <p style="text-align:center;">Track donations + pledges → sponsor children at <strong>$365 each</strong>.</p>
 
-    <!-- Goal Kids Input -->
-    <div class="config-box">
-        <h3>Campaign Goal</h3>
+    <!-- Goal Kids -->
+    <div class="config-box" style="background:#f0f8ff;padding:15px;border-radius:6px;">
+        <h3 style="margin-top:0;color:#1a73e8;">Campaign Goal</h3>
         <div class="input-group">
             <label for="goalKids">Children to Sponsor</label>
             <input type="number" id="goalKids" min="1" step="1" placeholder="800">
@@ -49,43 +67,41 @@
         <p class="note">Goal Amount = <span id="goalCalc">800 × $365 = $292,000</span></p>
     </div>
 
-    <div class="upload">
-        <input type="file" id="excelFile" accept=".xlsx,.xls">
-        <p><small>Upload donations file (Sheet5 must have <code>Jan - Dec 25</code> column)</small></p>
+    <!-- === COLLAPSIBLE DONATIONS === -->
+    <div class="section" id="donationsSection">
+        <div class="section-header" data-target="donationsSection">Upload Donations File</div>
+        <div class="section-content">
+            <input type="file" id="excelFile" accept=".xlsx,.xls">
+            <p class="note">Sheet5 → Column: <code>Jan - Dec 25</code> | Category: Column C</p>
+        </div>
     </div>
 
-    <!-- Pledges -->
-    <div class="pledge-box">
-        <h3>Add Known Pledges (not in file)</h3>
-        <input type="number" id="pledges" placeholder="e.g. 5000" min="0" step="1">
-        <p class="note">Saved locally — survives page refresh</p>
+    <!-- === COLLAPSIBLE PLEDGES === -->
+    <div class="section" id="pledgesSection">
+        <div class="section-header open" data-target="pledgesSection">Pledges</div>
+        <div class="section-content">
+            <input type="file" id="pledgesFile" accept=".xlsx,.xls">
+            <p class="note">Upload <code>pledges.xlsx</code> → <strong>Column B = pledge amounts</strong></p>
+            <div class="input-group">
+                <label for="pledges">Manual Pledges</label>
+                <input type="number" id="pledges" placeholder="e.g. 5000" min="0" step="1">
+            </div>
+            <button class="btn-clear" id="clearPledges">Clear All Pledges</button>
+            <p class="note">Total Pledges = File (Col B) + Manual</p>
+        </div>
     </div>
 
+    <!-- Summary -->
     <div class="summary">
-        <div class="box">
-            <h3>Donations (File)</h3>
-            <p id="donationsOnly">$0</p>
-        </div>
-        <div class="box pledge">
-            <h3>Pledges (Manual)</h3>
-            <p id="pledgesDisplay">$0</p>
-        </div>
-        <div class="box">
-            <h3>Total Raised</h3>
-            <p id="totalRaised">$0</p>
-        </div>
-        <div class="box goal">
-            <h3>Goal Amount</h3>
-            <p id="goalAmount">$292,000</p>
-        </div>
-        <div class="box">
-            <h3>Children Sponsored</h3>
-            <p id="kidsSponsored">0</p>
-        </div>
+        <div class="box"><h3>Donations (File)</h3><p id="donationsOnly">$0</p></div>
+        <div class="box pledge"><h3>Pledges (Total)</h3><p id="pledgesDisplay">$0</p></div>
+        <div class="box"><h3>Total Raised</h3><p id="totalRaised">$0</p></div>
+        <div class="box goal"><h3>Goal Amount</h3><p id="goalAmount">$292,000</p></div>
+        <div class="box"><h3>Children Sponsored</h3><p id="kidsSponsored">0</p></div>
     </div>
 
+    <!-- Charts -->
     <div class="charts">
-        <!-- Thermometer -->
         <div class="chart-box">
             <h3 style="text-align:center;margin-bottom:10px;">Progress Thermometer</h3>
             <div id="thermometer">
@@ -95,10 +111,8 @@
                 <div class="label" id="currentLabel" style="bottom:0;">$0</div>
             </div>
         </div>
-
-        <!-- Bar Chart -->
         <div class="chart-box">
-            <h3 style="text-align:center;margin-bottom:10px;">Donations by Category (File Only)</h3>
+            <h3 style="text-align:center;margin-bottom:10px;">Donations by Category</h3>
             <canvas id="barChart"></canvas>
         </div>
     </div>
@@ -109,184 +123,199 @@
 <script>
 /* ---------- CONSTANTS ---------- */
 const COST_PER_CHILD = 365;
-const STORAGE_KEY_GOAL = 'campaign_goalKids';
-const STORAGE_KEY_PLEDGES = 'campaign_pledges';
+const STORAGE = {
+    goal: 'campaign_goalKids',
+    pledgesFile: 'campaign_pledgesFile',
+    pledgesManual: 'campaign_pledgesManual',
+    collapse: 'campaign_collapseState'
+};
 
 /* ---------- STATE ---------- */
 let donationsFromFile = 0;
-let pledges = 0;
+let pledgesFromFile = 0;
+let pledgesManual = 0;
 let goalKids = 800;
 
-/* ---------- DOM Elements ---------- */
-const goalKidsInput     = document.getElementById('goalKids');
-const pledgesInput      = document.getElementById('pledges');
-const fileInput         = document.getElementById('excelFile');
+/* ---------- DOM ---------- */
+const goalKidsInput = document.getElementById('goalKids');
+const pledgesInput = document.getElementById('pledges');
+const pledgesFileInput = document.getElementById('pledgesFile');
+const excelFileInput = document.getElementById('excelFile');
+const clearBtn = document.getElementById('clearPledges');
 
-const donationsEl       = document.getElementById('donationsOnly');
-const pledgesEl         = document.getElementById('pledgesDisplay');
-const totalEl           = document.getElementById('totalRaised');
-const goalAmountEl      = document.getElementById('goalAmount');
-const kidsEl            = document.getElementById('kidsSponsored');
-const goalCalcEl        = document.getElementById('goalCalc');
-
-const fillEl            = document.getElementById('fill');
-const goalLabelEl       = document.getElementById('goalLabel');
-const curLabelEl        = document.getElementById('currentLabel');
-const errEl             = document.getElementById('error');
+const donationsEl = document.getElementById('donationsOnly');
+const pledgesEl = document.getElementById('pledgesDisplay');
+const totalEl = document.getElementById('totalRaised');
+const goalAmountEl = document.getElementById('goalAmount');
+const kidsEl = document.getElementById('kidsSponsored');
+const goalCalcEl = document.getElementById('goalCalc');
+const fillEl = document.getElementById('fill');
+const goalLabelEl = document.getElementById('goalLabel');
+const curLabelEl = document.getElementById('currentLabel');
+const errEl = document.getElementById('error');
 
 let barChart;
 const COLORS = ['#ff6384','#36a2eb','#ffce56','#4bc0c0','#9966ff','#ff9f40'];
 
 /* ---------- Helpers ---------- */
-function formatMoney(v) { return '$' + Math.floor(v).toLocaleString(); }
-function safeTrim(val) { return val == null ? '' : String(val).trim(); }
-function save(key, value) { localStorage.setItem(key, value); }
-function load(key, fallback) { return localStorage.getItem(key) || fallback; }
+function formatMoney(v){return '$'+Math.floor(v).toLocaleString();}
+function safeTrim(v){return v==null?'':String(v).trim();}
+function save(k,v){localStorage.setItem(k,v);}
+function load(k,f){return localStorage.getItem(k)||f;}
 
-/* ---------- Calculate Goal ---------- */
-function getGoal() { return goalKids * COST_PER_CHILD; }
+/* ---------- Goal ---------- */
+function getGoal(){return goalKids*COST_PER_CHILD;}
+function getTotalPledges(){return pledgesFromFile+pledgesManual;}
 
 /* ---------- Update UI ---------- */
-function updateAll() {
-    const total = donationsFromFile + pledges;
+function updateAll(){
+    const total = donationsFromFile + getTotalPledges();
     const goal = getGoal();
 
     donationsEl.textContent = formatMoney(donationsFromFile);
-    pledgesEl.textContent = formatMoney(pledges);
+    pledgesEl.textContent = formatMoney(getTotalPledges());
     totalEl.textContent = formatMoney(total);
     goalAmountEl.textContent = formatMoney(goal);
-    kidsEl.textContent = Math.floor(total / COST_PER_CHILD);
+    kidsEl.textContent = Math.floor(total/COST_PER_CHILD);
     goalCalcEl.textContent = `${goalKids} × $${COST_PER_CHILD} = ${formatMoney(goal)}`;
 
-    const percent = goal > 0 ? Math.min((total / goal) * 100, 100) : 0;
-    fillEl.style.height = percent + '%';
+    const percent = goal>0?Math.min((total/goal)*100,100):0;
+    fillEl.style.height = percent+'%';
     curLabelEl.textContent = formatMoney(total);
-    curLabelEl.style.bottom = (percent > 5 ? percent - 3 : percent + 1) + '%';
+    curLabelEl.style.bottom = (percent>5?percent-3:percent+1)+'%';
     goalLabelEl.textContent = `Goal ${formatMoney(goal)}`;
 }
 
 /* ---------- Load Settings ---------- */
-function loadSettings() {
-    goalKids = parseInt(load(STORAGE_KEY_GOAL, '800'), 10) || 800;
-    pledges = parseFloat(load(STORAGE_KEY_PLEDGES, '0')) || 0;
+function loadSettings(){
+    goalKids = parseInt(load(STORAGE.goal,'800'),10)||800;
+    pledgesManual = parseFloat(load(STORAGE.pledgesManual,'0'))||0;
+    pledgesFromFile = parseFloat(load(STORAGE.pledgesFile,'0'))||0;
 
     goalKidsInput.value = goalKids;
-    pledgesInput.value = pledges > 0 ? pledges : '';
+    pledgesInput.value = pledgesManual>0?pledgesManual:'';
     updateAll();
 }
 
-/* ---------- Input Handlers ---------- */
-goalKidsInput.addEventListener('input', () => {
-    const val = parseInt(goalKidsInput.value, 10);
-    if (val >= 1) {
-        goalKids = val;
-        save(STORAGE_KEY_GOAL, goalKids);
-        updateAll();
-    }
-});
+/* ---------- Save Pledges ---------- */
+function savePledges(){
+    save(STORAGE.pledgesFile,pledgesFromFile);
+    save(STORAGE.pledgesManual,pledgesManual);
+}
 
-pledgesInput.addEventListener('input', () => {
-    const val = parseFloat(pledgesInput.value) || 0;
-    if (val >= 0) {
-        pledges = val;
-        save(STORAGE_KEY_PLEDGES, pledges);
-        updateAll();
-    }
-});
+/* ---------- Collapsible Sections ---------- */
+function initCollapsibles(){
+    const saved = JSON.parse(load(STORAGE.collapse,'{}'));
+    document.querySelectorAll('.section').forEach(sec=>{
+        const id = sec.id;
+        const header = sec.querySelector('.section-header');
+        const content = sec.querySelector('.section-content');
 
-/* ---------- Bar Chart ---------- */
-function renderBar(data) {
-    const ctx = document.getElementById('barChart').getContext('2d');
-    if (barChart) barChart.destroy();
-
-    const labels = Object.keys(data);
-    const values = Object.values(data);
-
-    barChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Donations ($)',
-                data: values,
-                backgroundColor: COLORS.slice(0, labels.length),
-                borderColor: '#333',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => `$${ctx.parsed.y.toLocaleString()}`
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { callback: v => '$' + v.toLocaleString() }
-                }
-            }
+        // Restore saved state
+        if(saved[id]===false){
+            sec.classList.remove('open');
+            content.style.display='none';
+        }else{
+            sec.classList.add('open');
         }
+
+        header.addEventListener('click',()=>{
+            const willOpen = !sec.classList.contains('open');
+            sec.classList.toggle('open',willOpen);
+            content.style.display = willOpen?'block':'none';
+
+            const cur = JSON.parse(load(STORAGE.collapse,'{}'));
+            cur[id] = willOpen;
+            save(STORAGE.collapse,JSON.stringify(cur));
+        });
     });
 }
 
-/* ---------- Excel Processing ---------- */
-fileInput.addEventListener('change', e => {
-    errEl.classList.add('hidden');
-    const file = e.target.files[0];
-    if (!file) return;
+/* ---------- Input Handlers ---------- */
+goalKidsInput.addEventListener('input',()=>{const v=parseInt(goalKidsInput.value,10);if(v>=1){goalKids=v;save(STORAGE.goal,v);updateAll();}});
+pledgesInput.addEventListener('input',()=>{const v=parseFloat(pledgesInput.value)||0;if(v>=0){pledgesManual=v;savePledges();updateAll();}});
+clearBtn.addEventListener('click',()=>{
+    pledgesFromFile=0;pledgesManual=0;pledgesInput.value='';
+    localStorage.removeItem(STORAGE.pledgesFile);
+    localStorage.removeItem(STORAGE.pledgesManual);
+    updateAll();
+});
 
-    const reader = new FileReader();
-    reader.onload = ev => {
-        try {
-            const data = new Uint8Array(ev.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
-
-            if (workbook.SheetNames.length < 5) throw new Error('Sheet5 not found');
-            const sheet = workbook.Sheets[workbook.SheetNames[4]];  // Sheet5
-            const json = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ''});
-
-            const headerRow = json[3];
-            const totalColIdx = headerRow.indexOf('Jan - Dec 25');
-            if (totalColIdx === -1) throw new Error('"Jan - Dec 25" column not found in Sheet5');
-
-            let total = 0;
-            const categoryMap = {};
-
-            // Skip last 3 rows
-            for (let i = 4; i < json.length - 3; i++) {
-                const row = json[i];
-                const totalVal = parseFloat(row[totalColIdx]);
-                if (!isNaN(totalVal) && totalVal > 0) {
-                    total += totalVal;
-
-                    const catCell = row[2];  // Column C (index 2)
-                    const cat = safeTrim(catCell);
-                    if (cat) {
-                        categoryMap[cat] = (categoryMap[cat] || 0) + totalVal;
-                    }
-                }
-            }
-
-            donationsFromFile = total;
-            updateAll();
-            renderBar(categoryMap);
-
-        } catch (err) {
-            errEl.textContent = 'Error: ' + err.message;
+/* ---------- Pledges File (Column B) ---------- */
+pledgesFileInput.addEventListener('change',e=>{
+    const file=e.target.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+        try{
+            const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+            const ws=wb.Sheets[wb.SheetNames[0]];
+            const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+            let sum=0;
+            json.forEach(row=>{
+                const v=parseFloat(row[1]);  // Column B
+                if(!isNaN(v)&&v>0)sum+=v;
+            });
+            pledgesFromFile=sum;savePledges();updateAll();
+        }catch(err){
+            errEl.textContent='Pledges file error: '+err.message;
             errEl.classList.remove('hidden');
-            console.error(err);
         }
     };
-    reader.readAsArrayBuffer(file);
+    r.readAsArrayBuffer(file);
 });
+
+/* ---------- Donations File ---------- */
+excelFileInput.addEventListener('change',e=>{
+    errEl.classList.add('hidden');
+    const file=e.target.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+        try{
+            const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+            if(wb.SheetNames.length<5)throw new Error('Sheet5 not found');
+            const ws=wb.Sheets[wb.SheetNames[4]];
+            const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+            const headerRow=json[3];
+            const totalColIdx=headerRow.indexOf('Jan - Dec 25');
+            if(totalColIdx===-1)throw new Error('"Jan - Dec 25" column not found');
+
+            let total=0;const catMap={};
+            for(let i=4;i<json.length-3;i++){
+                const row=json[i];
+                const val=parseFloat(row[totalColIdx]);
+                if(!isNaN(val)&&val>0){
+                    total+=val;
+                    const cat=safeTrim(row[2]);
+                    if(cat)catMap[cat]=(catMap[cat]||0)+val;
+                }
+            }
+            donationsFromFile=total;updateAll();renderBar(catMap);
+        }catch(err){
+            errEl.textContent='Error: '+err.message;
+            errEl.classList.remove('hidden');
+        }
+    };
+    r.readAsArrayBuffer(file);
+});
+
+/* ---------- Bar Chart ---------- */
+function renderBar(data){
+    const ctx=document.getElementById('barChart').getContext('2d');
+    if(barChart)barChart.destroy();
+    const labels=Object.keys(data);
+    barChart=new Chart(ctx,{
+        type:'bar',
+        data:{labels:labels,datasets:[{label:'Donations ($)',data:Object.values(data),
+            backgroundColor:COLORS.slice(0,labels.length),borderWidth:1}]},
+        options:{responsive:true,plugins:{legend:{display:false}},
+            scales:{y:{beginAtZero:true,ticks:{callback:v=>'$'+v.toLocaleString()}}}}
+    });
+}
 
 /* ---------- Init ---------- */
 loadSettings();
+initCollapsibles();
 </script>
 </body>
 </html>
